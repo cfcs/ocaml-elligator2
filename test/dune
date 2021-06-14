@@ -1,0 +1,13 @@
+(test
+  (flags (-w -52))
+  (name testvectors)
+  (modules testvectors)
+  (libraries alcotest fmt elligator result rresult zarith crowbar)
+)
+
+(test
+  (flags (-w -52))
+  (name elligator_crowbar)
+  (modules elligator_crowbar)
+  (libraries fmt elligator result rresult zarith crowbar)
+)

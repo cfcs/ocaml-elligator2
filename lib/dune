@@ -1,0 +1,8 @@
+(library
+ (flags (-w -27))
+ (ocamlopt_flags (:standard -afl-instrument))
+ (ocamlc_flags (:standard -g))
+ (public_name elligator)
+ (modules elligator)
+ (libraries fmt logs result rresult zarith)
+)

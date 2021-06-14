@@ -1,0 +1,28 @@
+synopsis: "Elligator 2 for x25519 keys"
+description:
+"""
+OCaml port of the Monocypher implementation of Elligator2 (NOT Elligator Squared)
+"""
+opam-version: "2.0"
+maintainer: "xxx"
+bug-reports: "https://github.com/xxx/elligator/issues"
+homepage: "https://github.com/xxx/elligator/"
+dev-repo: "git+https://github.com/xxx/elligator.git"
+authors: [
+  "xxx"
+]
+license: "ISC"
+doc: "https://github.com/xxx/elligator"
+
+depends: [
+  "ocaml"        {         >= "4.09.0" }
+  "dune"         { build & >= "2.3.0"  }
+  "stdlib-shims"
+  "alcotest" {with-test}
+  "crowbar" {with-test}
+  "zarith"
+  "rresult"
+]
+
+
+build: [ [ "dune" "build" "-p" name "-j" jobs ] ]
