@@ -6,6 +6,14 @@
 # https://github.com/LoupVaillant/Monocypher/blob/master/tests/gen/elligator.py
 
 *)
+
+(* turn off polymorphic comparisons *)
+let ( = ) _a _b = assert false
+let ( <= ) _a _b = assert false
+let ( >= ) _a _b = assert false
+let ( <> ) _a _b = assert false
+
+
 module Fe' = struct
   type t = Z.t
   let p = Z.sub (Z.pow Z.(of_int 2) 255) (Z.of_int 19)
@@ -26,10 +34,10 @@ module Fe' = struct
   let invert t = Z.powm t (p-two) p
   let of_int t = make (Z.of_int t)
   let p_minus_one_halved = (p - one) // two (* TODO not field arithmetic *)
-  let is_positive t =
-    t <= p_minus_one_halved
   let is_negative t =
-    t > p_minus_one_halved
+    Int.equal 1 (Z.compare t p_minus_one_halved)
+  let is_positive t =
+    not (is_negative t)
   let abs t =
     if is_positive t then t else neg t
   let equal a b = Z.equal a b
@@ -82,11 +90,11 @@ let sqrt n =
   (* iterm 7237005577332262213973186563042994240829374041602535252466099000494570602494*)
   (* root 38214883241950591754978413199355411911188925816896391856984770930832735035196*)
   let root =
-    if 0 <> Fe.compare (root * root) n
+    if not (Fe.equal (root * root) n)
     then root * sqrtm1
     else root
   in
-  if 0 <> Fe.compare (root * root) n
+  if not (Fe.equal (root * root) n)
   then raise @@ Invalid_argument "should be square"
   else
     let absed = Fe.abs root in
@@ -106,9 +114,13 @@ let invsqrt x =
                   || Fe.equal quartic (Fe.of_int (-1)) in
     isr, is_square
 
-
-let fast_hash_to_curve r =
+let fast_hash_to_curve (r:Z.t) =
+  (* takes a Z.t because we need to strip the two padding bits and truncate the number to 254 bit before mod p *)
+  let r =
+    Z.logand r (Z.sub (Z.shift_left Z.one 254) Z.one)
+  in
   let open Fe in
+  let r = make r in
   let t1 = r**Fe.two * non_square in    (* r1 *)
   let u  = t1 + (Fe.one) in           (* r2 *)
   let t2 = u**(Fe.two) in
@@ -123,7 +135,7 @@ let fast_hash_to_curve r =
   let t1 = t1**Fe.two in
   let u  = u * (neg a) * t3 * t2 * t1 in
   let v =
-    if is_square <> is_negative v then neg v else v
+    if not @@ Bool.equal is_square (is_negative v) then neg v else v
   in
   (u, v)
 
@@ -144,6 +156,9 @@ let fast_curve_to_hash(u, v_is_negative) =
   else begin
     let u = if v_is_negative then t else u in
     let r = u * isr in
-    let r = abs r in
-    r
+    abs r
   end
+let ( = ) = Stdlib.(=)
+let ( <= ) = Stdlib.( <= )
+let ( >= ) = Stdlib.( >= )
+let ( <> ) = Stdlib.( <> )

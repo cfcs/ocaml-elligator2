@@ -24,12 +24,12 @@ let () =
 let () =
   Crowbar.add_test ~name:"hash_to_curve" [ Crowbar.bytes ]
     (fun b ->
-       let zb = Elligator.Fe.make (Z.of_bits b) in
-       if not @@ Fe.equal Fe.zero zb then begin
+       let zb = Z.of_bits b in
+       if not @@ Z.equal Z.zero zb then begin
          let u,v = Elligator.fast_hash_to_curve zb in
          (*Crowbar.check_eq ~pp:Format.pp_print_int
            ~eq:(=) (-1) (Z.compare u Elligator.Fe.p_minus_one_halved) ;*)
-         match crowbar_curve_to_hash (u,Elligator.Fe.is_negative v) with
+         match crowbar_curve_to_hash (u, Elligator.Fe.is_negative v) with
          | None -> begin
              let could_anyway = try
                  ignore @@ Elligator.fast_curve_to_hash (u, false) ;
@@ -42,10 +42,12 @@ let () =
              else ()
            end
          | Some recovered ->
-           let recovered =
-             if (Fe.equal zb recovered) then recovered
-             else Elligator.Fe.neg recovered in
+           let zb' =
+             let zb = Fe.make (Z.logand zb
+                                 (Z.sub (Z.shift_left Z.one 254) Z.one)) in
+             if (Fe.equal zb recovered) then zb
+             else Elligator.Fe.abs zb in
            Crowbar.check_eq ~pp:Fe.pp
-             ~eq:(fun a b -> Fe.equal a b) zb recovered
+             ~eq:(fun a b -> Fe.equal a b) zb' recovered
        end
     )

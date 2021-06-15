@@ -93,42 +93,26 @@ let test_hash_to_curve_constants () =
     "of_one"
     (Z.of_string "38597363079105398474523661669562635951089994888546854679819194669304376384412",
      Z.of_string "30992548688866185731160829815745906339026709887328719897407902247730032325131")
-    (Elligator.fast_hash_to_curve Fe.one |> fun (a,b) -> Fe.to_z a, Fe.to_z b) ;
+    (Elligator.fast_hash_to_curve Z.one |> fun (a,b) -> Fe.to_z a, Fe.to_z b) ;
   Alcotest.(check @@ pair z z)
     "of_two"
     (Z.of_string "45030256925622964886944271947823075276271660703304663793122393780855105538483",
      Z.of_string "21037884412067437766074211498089232523749489809903049778399820941367094096393")
-    (Elligator.fast_hash_to_curve Fe.two |> fun (a,b) -> Fe.to_z a, Fe.to_z b) ;
+    (Elligator.fast_hash_to_curve Z.(of_int 2)
+     |> fun (a,b) -> Fe.to_z a, Fe.to_z b)
+  (*
+  (* this is a 255-bit number, and hash_to_curve will strip bits above 254th,
+     so it would get truncated:
+  *)
   Alcotest.(check @@ pair z z)
     "47310081481026395040403022635459469081360849481376387804989803368254788325803"
     (Z.of_string "34021295128845576802458360516454404080554551641087266319719563259368607481687",
      Z.of_string "17871317264537405656965748591888242554347040978093714773468410072094893826597")
-    (Elligator.fast_hash_to_curve (Elligator.Fe.make (
-         Z.of_string "47310081481026395040403022635459469081360849481376387804989803368254788325803"))
+    (Elligator.fast_hash_to_curve (
+         Z.of_string "47310081481026395040403022635459469081360849481376387804989803368254788325803")
      |> fun (a,b) -> Fe.to_z a, Fe.to_z b
     )
-
-let test_hash_to_curve_regression_02 () =
-  let num = Z.of_string "47310081481026395040403022635459469081360849481376387804989803368254788325803" in
-  let u,w = Elligator.fast_hash_to_curve (Fe.make num) in
-  Alcotest.(check @@ pair z z ) "02:hash_to_curve"
-    (Z.of_string "34021295128845576802458360516454404080554551641087266319719563259368607481687",
-     Z.of_string "17871317264537405656965748591888242554347040978093714773468410072094893826597")
-    (u |> Fe.to_z, w |> Fe.to_z) ;
-  Alcotest.(check bool) "02:w_is_negative"
-    false (Elligator.Fe.is_negative w) ;
-  for i = 0 to 8 do
-    let pad = Z.mul (Z.of_int i)
-         (Z.pow (Z.of_int 2) 254) in
-    Format.printf "enc %d: %a\n" i Z.pp_print
-      (Elligator.Fe.make (Z.add pad num) |> Fe.to_z)  ;
-  done ;
-  (* note that it returns (-u) for this case instead of (u) *)
-  Alcotest.(check @@ z) "02:recover original"
-    (num)
-    (Fe.neg @@
-     fast_curve_to_hash (u,
-                         Elligator.Fe.is_negative w) |> Fe.to_z)
+  *)
 
 let test_invsqrt_regression_03 () =
   let r = Z.of_string "17110572816031430484076461863560896128683378075501183069243227681892024982449" in
@@ -144,7 +128,6 @@ let tests = [
   "selftest", [
     "invsqrt:regression03", `Quick, test_invsqrt_regression_03;
     "hash_to_curve:constants", `Quick, test_hash_to_curve_constants ;
-    "hash_to_curve:regression02", `Quick, test_hash_to_curve_regression_02 ;
     "curve_to_hash:zero", `Quick, test_curve_to_hash_zero ;
     "curve_to_hash:constants", `Quick, test_curve_to_hash_constants ;
     "curve_to_hash:regression01", `Quick, test_curve_to_hash_regression_01 ;
