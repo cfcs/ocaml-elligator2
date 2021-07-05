@@ -158,6 +158,39 @@ let fast_curve_to_hash(u, v_is_negative) =
     let r = u * isr in
     abs r
   end
+
+let of_bits_le str =
+  Z.of_bits (if not Sys.big_endian then str else
+               let len = String.length str in
+               String.init len (fun i -> str.[len-i-1]))
+
+let crypto_curve_to_hidden x tweak =
+  (* Choose repr based on tweak lsb *)
+  let w_is_negative = tweak land 1 = 1 in
+  let a = fast_curve_to_hash (x, w_is_negative) in
+  (* Apply random padding: *)
+  Fe.to_string a |> Bytes.of_string |> fun b ->
+  Bytes.set_int8 b 31 ((Bytes.get_int8 b 31) lor (tweak land 0xc0)) ;
+  Bytes.to_string b
+
+let crypto_hidden_to_curve hidden =
+  let clamped =
+    let hidden =
+      match String.length hidden with
+      | 32 -> hidden
+      | n when Stdlib.(<) n 32 -> (* pad msb with 0 to 32 bytes: *)
+        (String.make (32 - String.length hidden) '\000') ^ hidden
+      | n -> (* longer, take first 32 bytes: *) String.sub hidden 0 32
+    in
+    let h = Bytes.of_string hidden in
+    (* strip 2 MSB bits: *)
+    Bytes.set_int8 h 31 ((Bytes.get_int8 h 31) land 0x3f) ;
+    Bytes.to_string h
+  in
+  let u, w = fast_hash_to_curve (of_bits_le clamped) in
+  u
+
+(* reset Stdlib bind shadows: *)
 let ( = ) = Stdlib.(=)
 let ( <= ) = Stdlib.( <= )
 let ( >= ) = Stdlib.( >= )
