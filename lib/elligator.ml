@@ -190,6 +190,24 @@ let crypto_hidden_to_curve hidden =
   let u, w = fast_hash_to_curve (of_bits_le clamped) in
   u
 
+let pow_2_254_minus_10 = Z.sub (Z.pow Z.(succ one) 254) (Z.of_int 10)
+
+let crypto_hidden_adjust_kleshni hidden : string =
+  (* decoding (some) Elligator representations from the Kleshni implementation
+     requires additional preprocessing before being passed into
+     {!crypto_hidden_to_curve}:
+     representative mod p :
+       if lower than 2**254-10
+       then rep mod p
+       else rep mod p
+  *)
+  let open Fe' in
+  let modp = make (of_bits_le hidden) in
+  begin if compare modp pow_2_254_minus_10 > 0
+    then neg modp
+    else modp end
+  |> Z.to_bits
+
 (* reset Stdlib bind shadows: *)
 let ( = ) = Stdlib.(=)
 let ( <= ) = Stdlib.( <= )
