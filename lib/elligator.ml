@@ -164,6 +164,12 @@ let of_bits_le str =
                let len = String.length str in
                String.init len (fun i -> str.[len-i-1]))
 
+let to_bits_le z =
+  let enc = Z.to_bits z in
+  (if not Sys.big_endian then enc else
+     let len = String.length enc in
+     String.init len (fun i -> enc.[len-i-1]))
+
 let crypto_curve_to_hidden x tweak =
   (* Choose repr based on tweak lsb *)
   let w_is_negative = tweak land 1 = 1 in
@@ -206,7 +212,7 @@ let crypto_hidden_adjust_kleshni hidden : string =
   begin if compare modp pow_2_254_minus_10 > 0
     then neg modp
     else modp end
-  |> Z.to_bits
+  |> to_bits_le
 
 (* reset Stdlib bind shadows: *)
 let ( = ) = Stdlib.(=)
