@@ -4,6 +4,8 @@ This repository contains an attempt to faithfully translate the Elligator 2 impl
 
 Elligator 2 provides a mapping from x25519 public key (curve points) to bitstrings indistinguishable from uniformly random 256-bit bitstrings.
 
+**NB: Currently requires pinning** `opam pin add mirage-crypto-ec https://github.com/cfcs/mirage-crypto#raw_scalarmult`
+
 The main API entry points are:
 
 ```

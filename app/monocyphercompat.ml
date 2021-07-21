@@ -18,8 +18,9 @@ let jump () mode filename =
           let out_cmp = Elligator.crypto_hidden_to_curve random_input in
           lcount :=
             (* requires scalar_mult patched to not clamp things *)
-            (let x = Mirage_crypto_ec.X25519.scalar_mult l_cs
-                (Elligator.to_bits_le (Elligator.Fe.to_z out_cmp)
+            (let x = Mirage_crypto_ec.X25519.unclamped_scalar_mult
+                 ~scalar:l_cs
+                 ~point:(Elligator.to_bits_le (Elligator.Fe.to_z out_cmp)
                  |> Cstruct.of_string) |> Cstruct.to_string in
             (LCount.update x (function None -> Some 1 | Some i -> Some (succ i))
             !lcount)) ;

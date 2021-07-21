@@ -9,9 +9,9 @@ let () =
   let count = function
     | None -> Some 1 | Some i -> Some (succ i) in
   let mult_L x =
-    Mirage_crypto_ec.X25519.scalar_mult l_cs
-        (Elligator.crypto_hidden_to_curve x
-         |> Elligator.Fe.to_z |> Z.to_bits |> Cstruct.of_string)
+    Mirage_crypto_ec.X25519.unclamped_scalar_mult ~scalar:l_cs
+      ~point:(Elligator.crypto_hidden_to_curve x
+              |> Elligator.Fe.to_z |> Z.to_bits |> Cstruct.of_string)
     |> Cstruct.to_string
   in
   for i = 0 to 100000 do
