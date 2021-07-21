@@ -61,7 +61,6 @@ let () =
          assert (Elligator.can_curve_to_hash zb)
     )
 
-
 let () =
   Crowbar.add_test ~name:"hash_to_curve" [ Crowbar.bytes ]
     (fun b ->
