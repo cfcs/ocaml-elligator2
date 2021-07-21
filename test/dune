@@ -2,12 +2,12 @@
   (flags (-w -52))
   (name testvectors)
   (modules testvectors)
-  (libraries alcotest fmt elligator result rresult zarith crowbar)
+  (libraries alcotest fmt elligator result rresult zarith crowbar mirage-crypto-ec cstruct)
 )
 
 (test
   (flags (-w -52))
   (name elligator_crowbar)
   (modules elligator_crowbar)
-  (libraries fmt elligator result rresult zarith crowbar)
+  (libraries fmt elligator result rresult zarith crowbar mirage-crypto-ec cstruct mirage-crypto-rng.unix)
 )

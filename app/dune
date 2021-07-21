@@ -1,0 +1,8 @@
+(executable
+(name monocyphercompat)
+(public_name monocyphercompat)
+(modules monocyphercompat)
+(package elligator)
+(libraries cmdliner fmt.cli logs.cli logs.fmt fmt.tty rresult result elligator zarith cstruct mirage-crypto-ec mirage-crypto-rng.unix)
+)
+

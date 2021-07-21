@@ -13,6 +13,10 @@ let ( <= ) _a _b = assert false
 let ( >= ) _a _b = assert false
 let ( <> ) _a _b = assert false
 
+let of_bits_le str =
+  Z.of_bits (if not Sys.big_endian then str else
+               let len = String.length str in
+               String.init len (fun i -> str.[len-i-1]))
 
 module Fe' = struct
   type t = Z.t
@@ -23,7 +27,8 @@ module Fe' = struct
   let ( + ) a b = make (add a b)
   let sub t t2 = make (Z.sub t t2)
   let ( - ) a b = make (sub a b)
-  let ( * ) t t2 = make (Z.mul t t2)
+  let mul t t2 = make (Z.mul t t2)
+  let ( * ) t t2 = mul t t2
   let floordiv t t2 = make (Z.fdiv t t2)
   let ( // ) a b = make (floordiv a b)
   let ( ** ) base exp = Z.powm base exp p
@@ -43,8 +48,15 @@ module Fe' = struct
   let equal a b = Z.equal a b
   let compare a b = Z.compare a b
   let to_z t = t
+  let of_bytes_le x = make (of_bits_le x)
   let to_string = Z.to_string
   let pp = Z.pp_print
+  let x_25519_L =
+    (*Z.of_string "14781619447589544791020593568409986887264606134616475288964881837755586237401"*)
+    let open Z in
+    pow (of_int 2) 252
+      |> add (of_string "27742317777372353535851937790883648493")
+  let fe_L = make x_25519_L
 end
 module Fe : sig
   type t
@@ -67,7 +79,9 @@ module Fe : sig
   val equal : t -> t -> bool
   val compare : t -> t -> int
   val to_z : t -> Z.t
+  val of_bytes_le : string -> t
   val pp : Format.formatter -> t -> unit
+  val fe_L : t
 end = Fe'
 
 let non_square = Fe.two
@@ -141,6 +155,7 @@ let fast_hash_to_curve (r:Z.t) =
 
 let can_curve_to_hash u=
   let open Fe in
+  if Fe.equal Fe.zero u then false else (* TODO not in monocypher *)
   let t = (u+a) in
   let r = ((neg non_square) * u * t) in
   (not (equal u (neg a)))
@@ -159,23 +174,25 @@ let fast_curve_to_hash(u, v_is_negative) =
     abs r
   end
 
-let of_bits_le str =
-  Z.of_bits (if not Sys.big_endian then str else
-               let len = String.length str in
-               String.init len (fun i -> str.[len-i-1]))
 
 let to_bits_le z =
   let enc = Z.to_bits z in
-  (if not Sys.big_endian then enc else
+  let pad s =
+    let enclen = String.length s in
+    if Stdlib.(>=) enclen 32 then s else begin
+      String.init 32 (fun i -> if Stdlib.(>=) i enclen then '\x00' else s.[i])
+    end
+  in
+  pad (if not Sys.big_endian then enc else
      let len = String.length enc in
      String.init len (fun i -> enc.[len-i-1]))
 
 let crypto_curve_to_hidden x tweak =
   (* Choose repr based on tweak lsb *)
-  let w_is_negative = tweak land 1 = 1 in
+  let w_is_negative = Int.equal 1 (tweak land 1) in
   let a = fast_curve_to_hash (x, w_is_negative) in
   (* Apply random padding: *)
-  Fe.to_string a |> Bytes.of_string |> fun b ->
+  Fe.to_z a |> to_bits_le |> Bytes.of_string |> fun b ->
   Bytes.set_int8 b 31 ((Bytes.get_int8 b 31) lor (tweak land 0xc0)) ;
   Bytes.to_string b
 

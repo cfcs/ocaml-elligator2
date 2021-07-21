@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <monocypher.h>
@@ -26,12 +27,18 @@ main(int argc, char **argv)
 	testcase_t o = { 0 };
 	FILE *fh = NULL;
 
-	assert(argc == 3);
+	assert(argc >= 3);
 
 	if(0 == strcmp("gen", argv[1])) {
 		size_t i = 0;
 		fh = fopen(argv[2], "w");
 		assert(NULL != fh);
+		size_t stop = 100;
+		if (argc >= 4) {
+			char * argv3_end = argv[3] + strlen(argv[3]);
+			stop = strtoll(argv[3], &argv3_end, 0);
+
+		}
 
 		do {
 			assert(0 == getentropy(o.in, sizeof(o.in)));
@@ -39,7 +46,7 @@ main(int argc, char **argv)
 			crypto_hidden_to_curve(o.out, o.in);
 			assert(0 == crypto_curve_to_hidden(o.recovered, o.out, o.tweak));
 			fwrite(&o, sizeof(o), 1, fh);
-		} while(++i < 100);
+		} while(++i < stop);
 		fflush(fh);
 	} else if (0 == strcmp("check", argv[1])) {
 		typeof(o.out) out_cmp = { 0 };

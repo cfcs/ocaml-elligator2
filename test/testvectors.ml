@@ -152,6 +152,7 @@ let test_invsqrt_regression_03 () =
     (Z.of_string "27013846042512794332341774676220311383587730127126972429027178645665401448062", true)
     (Elligator.invsqrt (Fe.make r) |> fun (a,b) -> Fe.to_z a, b)
 
+
 let tests = [
   "assertions", [
     "constants", `Quick, test_constants ;
