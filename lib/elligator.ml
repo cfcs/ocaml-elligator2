@@ -52,7 +52,6 @@ module Fe' = struct
   let to_string = Z.to_string
   let pp = Z.pp_print
   let x_25519_L =
-    (*Z.of_string "14781619447589544791020593568409986887264606134616475288964881837755586237401"*)
     let open Z in
     pow (of_int 2) 252
       |> add (of_string "27742317777372353535851937790883648493")

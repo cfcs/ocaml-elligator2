@@ -1,11 +1,13 @@
 open Elligator
 
+module SMap = Map.Make(String)
 let () =
-  let module MC = Map.Make(String) in
+  (* ensure that scalar_mult with L for any random point
+     results in at most 4 diff points *)
   Mirage_crypto_rng_unix.initialize ();
   let l_cs = Elligator.(to_bits_le Fe'.fe_L) |> Cstruct.of_string in
-  let count_random = ref MC.empty in
-  let count_elligatored = ref MC.empty in
+  let count_random = ref SMap.empty in
+  let count_elligatored = ref SMap.empty in
   let count = function
     | None -> Some 1 | Some i -> Some (succ i) in
   let mult_L x =
@@ -14,33 +16,54 @@ let () =
               |> Elligator.Fe.to_z |> Z.to_bits |> Cstruct.of_string)
     |> Cstruct.to_string
   in
-  for i = 0 to 100000 do
-    let random_rep = Mirage_crypto_rng_unix.getrandom 32 in
-
-    let random_dec = Elligator.crypto_hidden_to_curve (Cstruct.to_string random_rep) |> Elligator.Fe.to_string in
-
-    count_random := MC.update (mult_L random_dec) count !count_random ;
-
-    let rep =
-      let made = ref Elligator.Fe.zero in
-      while not @@ can_curve_to_hash !made do
-        let pk = Mirage_crypto_ec.X25519.gen_key () |> snd in
-        made := Cstruct.to_string pk
-         |> Elligator.of_bits_le
-         |> Elligator.Fe.make
-      done ;
-      assert (can_curve_to_hash !made);
-      Elligator.crypto_curve_to_hidden !made 10
-    in
-    count_elligatored := MC.update (mult_L rep) count !count_elligatored;
-  done;
-  Format.printf "random %d\nelligatored %d\n" (MC.cardinal !count_random)
-    (MC.cardinal !count_elligatored) ;
-  let p key value = Format.printf "value: %d key:%S\n" value key in
-  MC.iter p !count_random ;
-  Format.printf "\n--------------\n";
-  MC.iter p !count_elligatored
-
+  Crowbar.add_test ~name:"stat_L_rep" [ Crowbar.bytes_fixed 32 ]
+    (fun b ->
+       (* first decode random bytestring as a representative: *)
+       let random_rep = Cstruct.of_string b in
+       let random_dec = Elligator.crypto_hidden_to_curve
+           (Cstruct.to_string random_rep) |> Elligator.Fe.to_string in
+       count_elligatored := SMap.update (mult_L random_dec) count
+           !count_elligatored ;
+       Crowbar.check (let c = SMap.cardinal !count_elligatored in
+                      0 < c && c <= 4)
+    ) ;
+  Crowbar.add_test ~name:"stat_L_genkey" [ Crowbar.bytes_fixed 32 ;
+                                           Crowbar.int8 ]
+    (fun b tweak ->
+       let rep =
+         let made = ref Elligator.Fe.zero in
+         while not @@ can_curve_to_hash !made do
+           (* check that crypto_curve_to_hidden fails, e.g. that
+              can_curve_to_hash is not overeager in rejecting keys: *)
+           Crowbar.check
+             (begin match
+                 Elligator.crypto_curve_to_hidden !made 0
+               with
+               | exception _ ->
+                 begin try
+                     ignore @@ Elligator.crypto_curve_to_hidden !made tweak ;
+                     false
+                   with _ -> true (* threw exceptions for both tweaks *)
+                 end
+               | _ -> false
+             end);
+           (* generate an eligible pk: *)
+           let pk = Mirage_crypto_ec.X25519.gen_key () |> snd in
+           made := Cstruct.to_string pk
+                   |> Elligator.of_bits_le
+                   |> Elligator.Fe.make
+         done ;
+         Elligator.crypto_curve_to_hidden !made tweak
+         |> Elligator.crypto_hidden_to_curve |> fun fe ->
+         (* ensure encode/decode works: *)
+         Crowbar.check_eq ~eq:Fe.equal fe !made ;
+         Elligator.Fe.to_z fe |> Elligator.to_bits_le
+       in
+       count_random := SMap.update (mult_L rep) count !count_random;
+       Crowbar.check (let c = SMap.cardinal !count_random in
+                      0 < c && c <= 4);
+       (* TODO check that distribution is statistically even? *)
+    )
 
 let crowbar_curve_to_hash (u,v_is_negative) =
   let can_recover = Elligator.can_curve_to_hash u in
